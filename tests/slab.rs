@@ -2,7 +2,10 @@
 
 use slab::*;
 
-use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+use std::{
+    iter::FromIterator,
+    panic::{catch_unwind, resume_unwind, AssertUnwindSafe},
+};
 
 #[test]
 fn insert_get_remove_one() {
@@ -730,4 +733,31 @@ fn clone_from() {
     assert_eq!(iter2.next(), Some((4, &4)));
     assert_eq!(iter2.next(), None);
     assert!(slab2.capacity() >= 10);
+}
+
+#[test]
+fn get_disjoint_mut() {
+    let mut slab = Slab::from_iter((0..5).enumerate());
+    slab.remove(1);
+    slab.remove(3);
+
+    assert_eq!(
+        slab.get_disjoint_mut([4, 2, 0]).unwrap().map(|x| *x),
+        [4, 2, 0]
+    );
+
+    assert_eq!(
+        slab.get_disjoint_mut([2, 1, 0, 2]),
+        Err(GetDisjointMutError::OverlappingIndices)
+    );
+
+    assert_eq!(
+        slab.get_disjoint_mut([1, 2, 3]),
+        Err(GetDisjointMutError::IndexVacant)
+    );
+
+    assert_eq!(
+        slab.get_disjoint_mut([1, 2, 3, 5]),
+        Err(GetDisjointMutError::IndexOutOfBounds)
+    );
 }
